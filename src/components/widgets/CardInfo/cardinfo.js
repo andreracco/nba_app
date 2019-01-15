@@ -20,7 +20,7 @@ const CardInfo = (props) => {
                 {getTeamName(props.teams,props.teamId)}
             </span>
             <span className={style.date}>
-                <FontAwesome name="clock-o" />
+                <FontAwesome name="clock-o" />&nbsp;
                 {props.date}
             </span>
         </div>
