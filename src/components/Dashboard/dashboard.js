@@ -1,10 +1,10 @@
 import React, { Component } from 'react';
 import FormField from '../widgets/FormFields/formFields';
 import style from './dashboard.module.css';
-import { firebaseTeams } from '../../firebase';
+import { firebaseTeams, firebaseArticles, firebase } from '../../firebase';
 
 import { Editor } from 'react-draft-wysiwyg';
-import { EditorState, convertFromRaw, convertToRaw } from 'draft-js';
+import { EditorState, convertToRaw, convertFromRaw } from 'draft-js';
 import { stateToHTML } from 'draft-js-export-html';
 
 import Uploader from '../widgets/FileUploader/fileUploader';
@@ -81,10 +81,10 @@ class Dashboard extends Component {
 
         firebaseTeams.once('value')
         .then( (snapshot) => {
-            let teams = [];
+            let team = [];
 
             snapshot.forEach((childSnapshot) => {
-                teams.push({
+                team.push({
                     id: childSnapshot.val().teamId,
                     name: childSnapshot.val().city
                 })
@@ -93,7 +93,7 @@ class Dashboard extends Component {
             const newFormData = {...this.state.formdata};
             const newElement = {...newFormData['team']};
 
-            newElement.config.options = teams;
+            newElement.config.options = team;
             newFormData['team'] = newElement;
 
             this.setState({
@@ -157,9 +157,36 @@ class Dashboard extends Component {
         for (let key in this.state.formdata) {
             formIsValid = this.state.formdata[key].valid && formIsValid;
         }
+        
         console.log(dataToSubmit);
+        
         if (formIsValid) {
-            console.log('OK TO SUBmit');
+            this.setState({
+                loading: true,
+                postError: ''
+            })
+
+            firebaseArticles.orderByChild('id').limitToLast(1).once('value')
+            .then( (snapshot) => {
+                let articleId = null;
+                
+                snapshot.forEach( childSnapshot => {
+                    articleId = childSnapshot.val().id;
+                });
+
+                dataToSubmit['date'] = firebase.database.ServerValue.TIMESTAMP;
+                dataToSubmit['id'] = articleId + 1;
+                dataToSubmit['team'] = parseInt(dataToSubmit['team']);
+
+                firebaseArticles.push(dataToSubmit)
+                .then( article => {
+                    this.props.history.push(`/articles/${article.key}`)
+                }).catch( error => {
+                    this.setState({
+                        postError: error.message
+                    })
+                })
+            })
         } else {
             this.setState({
                 postError: 'Error posting'
@@ -224,6 +251,7 @@ class Dashboard extends Component {
                     />
 
                     <Editor
+                        toolbarHidden
                         editorState={this.state.editorState}
                         wrapperClassName="editorWrapper"
                         editorClassName="editorEditor"
